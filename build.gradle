@@ -1,0 +1,151 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'java-library'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'com.github.sherter.google-java-format' version '0.9'
+}
+
+println("Notice: current gradle version is " + gradle.gradleVersion)
+// Additional attribute definition
+ext {
+    // jackson version
+    solcJVersion = "0.8.11.1"
+    guavaVersion = "32.0.1-jre"
+    commonsCollections4Version = "4.4"
+    springVersion = '5.3.32'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
+archivesBaseName = 'web3j-perf'
+version = '1.0.0'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+// In this section you declare where to find the dependencies of your project
+repositories {
+    mavenCentral()
+    maven { url "https://maven.aliyun.com/nexus/content/groups/public/" }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+    maven { url "https://oss.sonatype.org/service/local/staging/deploy/maven2"}
+    
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+        }
+    }
+    integrationTest {
+        copy {
+            from file('src/test/resources/amop/')
+            into 'conf/amop'
+        }
+        java {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/java')
+        }
+        resources.srcDir file('src/integration-test/resources')
+    }
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+List spring = [
+        "org.springframework:spring-core:$springVersion",
+        "org.springframework:spring-beans:$springVersion",
+        "org.springframework:spring-context:$springVersion",
+        "org.springframework:spring-tx:$springVersion",
+]
+
+def log4j_version= '2.22.1'
+List logger = [
+        "org.apache.logging.log4j:log4j-api:$log4j_version",
+        "org.apache.logging.log4j:log4j-core:$log4j_version",
+        "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version",
+        "org.apache.logging.log4j:log4j-web:$log4j_version"
+]
+
+googleJavaFormat {
+    toolVersion = '1.7'
+    options style: 'AOSP'
+    source = sourceSets*.allJava
+    include '**/*.java'
+    exclude '**/*Test.java'
+    exclude '**/Test*.java'
+    exclude '**/Mock*.java'
+}
+
+dependencies {
+    // https://mvnrepository.com/artifact/org.web3j/core
+    implementation 'org.web3j:core:4.9.8'
+
+    implementation ('com.fasterxml.jackson.core:jackson-databind:2.17.0'){
+        force true
+    }
+    implementation ("org.fisco-bcos:solcJ:${solcJVersion}"){
+        exclude group : " com.fasterxml.jackson.core"
+    }
+    implementation ("com.google.guava:guava:${guavaVersion}")
+    implementation ("org.apache.commons:commons-collections4:${commonsCollections4Version}")
+    implementation ('me.tongfei:progressbar:0.10.1')
+    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
+    api("org.apache.commons:commons-lang3:3.12.0")
+    api spring
+    api logger
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.addStringOption('encoding', 'UTF-8')
+    options.addStringOption('charSet', 'UTF-8')
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    archiveClassifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+jar {
+    destinationDir file('dist/apps')
+    archiveName project.name + '-' + project.version + '.jar'
+    exclude '**/*.xml'
+    exclude '**/*.properties'
+    doLast {
+        copy {
+            from configurations.runtimeClasspath
+            into 'dist/lib'
+        }
+        copy {
+            from file('src/test/resources/')
+            into 'dist/conf'
+        }
+    }
+}
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled false
+    }
+}
+check.dependsOn jacocoTestReport
+
+

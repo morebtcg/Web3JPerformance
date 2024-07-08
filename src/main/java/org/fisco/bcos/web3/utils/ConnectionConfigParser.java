@@ -39,16 +39,16 @@ public class ConnectionConfigParser extends ConfigParser {
     }
 
     public static class Service {
-        private String url;
+        private List<String> url;
         private Long chainID;
 
         public Service(Object properties) throws Web3jException {
             Map<String, Object> myProperties = (Map<String, Object>) properties;
-            url = parseString(myProperties, "url");
+            url = parseArrayList(myProperties, "url");
             chainID = parseLong(myProperties, "chainID", null);
         }
 
-        public String getUrl() {
+        public List<String> getUrl() {
             return url;
         }
 

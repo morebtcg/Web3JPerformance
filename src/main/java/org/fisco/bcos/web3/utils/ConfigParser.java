@@ -2,6 +2,7 @@ package org.fisco.bcos.web3.utils;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Map;
 import org.fisco.bcos.web3.exception.Web3jException;
 import org.slf4j.Logger;
@@ -84,5 +85,11 @@ public class ConfigParser {
         } catch (Exception e) {
             return defaultValue;
         }
+    }
+
+    public static List<String> parseArrayList(Map<String, Object> properties, String key)
+            throws Web3jException {
+        mustExist(properties, key);
+        return (List<String>) properties.get(key);
     }
 }

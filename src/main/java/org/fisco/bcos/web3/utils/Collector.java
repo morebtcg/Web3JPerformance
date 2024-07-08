@@ -65,9 +65,10 @@ public class Collector {
             boolean errorMessage = false;
             if (!receipt.isStatusOK()) {
                 logger.error(
-                        "error receipt, status: {}, hash: {}",
+                        "error receipt, status: {}, hash: {}, msg: {}",
                         receipt.getStatus(),
-                        receipt.getTransactionHash());
+                        receipt.getTransactionHash(),
+                        receipt.getRevertReason());
                 errorMessage = true;
             }
             stat(errorMessage, cost);

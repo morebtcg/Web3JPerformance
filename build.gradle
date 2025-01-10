@@ -4,7 +4,6 @@ plugins {
     id 'java-library'
     id 'jacoco'
     id 'maven-publish'
-    id 'com.github.sherter.google-java-format' version '0.9'
 }
 
 println("Notice: current gradle version is " + gradle.gradleVersion)
@@ -24,16 +23,12 @@ tasks.withType(JavaCompile) {
 archivesBaseName = 'web3j-perf'
 version = '1.0.0'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
 // In this section you declare where to find the dependencies of your project
 repositories {
-    mavenCentral()
     maven { url "https://maven.aliyun.com/nexus/content/groups/public/" }
     maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
     maven { url "https://oss.sonatype.org/service/local/staging/deploy/maven2"}
-    
+    mavenCentral()
 }
 
 sourceSets {
@@ -75,23 +70,11 @@ List logger = [
         "org.apache.logging.log4j:log4j-web:$log4j_version"
 ]
 
-googleJavaFormat {
-    toolVersion = '1.7'
-    options style: 'AOSP'
-    source = sourceSets*.allJava
-    include '**/*.java'
-    exclude '**/*Test.java'
-    exclude '**/Test*.java'
-    exclude '**/Mock*.java'
-}
-
 dependencies {
     // https://mvnrepository.com/artifact/org.web3j/core
     implementation 'org.web3j:core:4.9.8'
 
-    implementation ('com.fasterxml.jackson.core:jackson-databind:2.17.0'){
-        force true
-    }
+    implementation ('com.fasterxml.jackson.core:jackson-databind:2.17.0')
     implementation ("org.fisco-bcos:solcJ:${solcJVersion}"){
         exclude group : " com.fasterxml.jackson.core"
     }
@@ -125,8 +108,8 @@ task javadocJar(type: Jar) {
 }
 
 jar {
-    destinationDir file('dist/apps')
-    archiveName project.name + '-' + project.version + '.jar'
+    destinationDirectory = file('dist/apps')
+    exclude '**/*.toml'
     exclude '**/*.xml'
     exclude '**/*.properties'
     doLast {
@@ -140,12 +123,4 @@ jar {
         }
     }
 }
-jacocoTestReport {
-    reports {
-        xml.enabled true
-        html.enabled false
-    }
-}
-check.dependsOn jacocoTestReport
-
 

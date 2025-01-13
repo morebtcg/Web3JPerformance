@@ -1,15 +1,13 @@
 package org.fisco.bcos.web3.connection;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import okhttp3.ConnectionPool;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.logging.HttpLoggingInterceptor;
 import org.fisco.bcos.web3.utils.ConnectionConfigParser;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
@@ -37,7 +35,7 @@ public class Web3jConnection {
 						return chain.proceed(newRequest);
 					}
 				}).build();
-		web3j = Web3j.build(new HttpService(url, client, false));
+		web3j = Web3j.build(new HttpService(url, client, false), 500, Executors.newSingleThreadScheduledExecutor());
 	}
 
 	public Web3j getWeb3j() {

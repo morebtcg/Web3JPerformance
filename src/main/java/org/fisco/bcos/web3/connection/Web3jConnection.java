@@ -10,7 +10,9 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.fisco.bcos.web3.utils.ConnectionConfigParser;
 import org.web3j.protocol.Web3j;
+import org.web3j.protocol.besu.Besu;
 import org.web3j.protocol.http.HttpService;
+import org.web3j.protocol.websocket.WebSocketService;
 
 public class Web3jConnection {
 	private String url;
@@ -18,7 +20,7 @@ public class Web3jConnection {
 	private Long chainID;
 	private OkHttpClient client;
 
-	public Web3jConnection(ConnectionConfigParser config) {
+	public Web3jConnection(ConnectionConfigParser config) throws Exception{
 		this.url = config.getService().getUrl();
 		this.chainID = config.getService().getChainID();
 
@@ -35,7 +37,9 @@ public class Web3jConnection {
 						return chain.proceed(newRequest);
 					}
 				}).build();
-		web3j = Web3j.build(new HttpService(url, client, false), 500, Executors.newSingleThreadScheduledExecutor());
+		WebSocketService webSocketService = new WebSocketService(url, false);
+		webSocketService.connect();
+		web3j = Besu.build(webSocketService, 500, Executors.newSingleThreadScheduledExecutor());
 	}
 
 	public Web3j getWeb3j() {

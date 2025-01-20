@@ -41,7 +41,6 @@ public class OkTest {
 			Usage();
 			return;
 		}
-
 		Toml connectionToml = ConfigUtils.getToml("classpath:config.toml");
 		ConnectionConfigParser connectionConfigParser = new ConnectionConfigParser(connectionToml.toMap());
 
@@ -72,6 +71,7 @@ public class OkTest {
 		for (int i = 0; i < users; ++i) {
 			final  int index = i;
 			threads.add(Thread.ofVirtual().name("RPC-" + i).start(() -> {
+				try{
 				Web3jConnection web3jConnection = new Web3jConnection(connectionConfigParser);
 				Web3j web3j = web3jConnection.getWeb3j();
 				Credentials credentials = Credentials.create(String.format("0x%032d", index + 1));
@@ -97,6 +97,9 @@ public class OkTest {
 						collector.onMessage(errorReceipt, receiveTime);
 					}
 				}
+			}catch(Exception e){
+				LOGGER.warn("send transaction exception, e: ", e);
+			}
 			}));
 		}
 

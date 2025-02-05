@@ -38,16 +38,16 @@ public class Web3jConnection {
 					}
 				}).build();
 		if(config.getService().getEnableWs()) {
-			System.out.println("Create We3j using Websocket, pollingInterval: "
-					+ config.getService().getPollingInterval() + ", url: " + url);
+			//System.out.println("Create We3j using Websocket, pollingInterval: "
+			//		+ config.getService().getPollingInterval() + ", url: " + url);
 			WebSocketService webSocketService = new WebSocketService(url, false);
 			webSocketService.connect();
 			web3j = Besu.build(webSocketService,
 					config.getService().getPollingInterval(),
 					Executors.newSingleThreadScheduledExecutor());
 		}else{
-			System.out.println("Create We3j using httpService, pollingInterval: "
-					+ config.getService().getPollingInterval() + ", url: " + url);
+			//System.out.println("Create We3j using httpService, pollingInterval: "
+			//		+ config.getService().getPollingInterval() + ", url: " + url);
 			web3j = Web3j.build(new HttpService(url, client, false),
 					config.getService().getPollingInterval(), Executors.newSingleThreadScheduledExecutor());
 		}

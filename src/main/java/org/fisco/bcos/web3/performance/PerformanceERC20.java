@@ -1,35 +1,33 @@
 package org.fisco.bcos.web3.performance;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.moandjiezana.toml.Toml;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
 import org.fisco.bcos.web3.connection.Web3jConnection;
-import org.fisco.bcos.web3.contract.ERC20;
 import org.fisco.bcos.web3.contract.MyERC20;
-import org.fisco.bcos.web3.contract.Ok;
 import org.fisco.bcos.web3.utils.Collector;
 import org.fisco.bcos.web3.utils.ConfigUtils;
 import org.fisco.bcos.web3.utils.ConnectionConfigParser;
+import org.fisco.bcos.web3.utils.ObjectMapperFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
-import org.web3j.protocol.core.RemoteCall;
-import org.web3j.protocol.core.RemoteFunctionCall;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.tx.FastRawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.tx.gas.StaticGasProvider;
 import org.web3j.tx.response.PollingTransactionReceiptProcessor;
+import org.web3j.utils.RevertReasonExtractor;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -69,6 +67,7 @@ public class PerformanceERC20 {
         private final Collector collector;
         private final ProgressBar receiveBar;
         private final CountDownLatch transactionLatch;
+
         public TransactionErrorCallback(Collector collector, ProgressBar receiveBar, CountDownLatch transactionLatch){
             this.startTime = System.currentTimeMillis();
             this.collector = collector;
@@ -81,6 +80,7 @@ public class PerformanceERC20 {
             transactionLatch.countDown();
             System.out.println("Send transaction failed, error: " + throwable.getMessage());
             TransactionReceipt errorReceipt = new TransactionReceipt();
+            errorReceipt.setRevertReason(throwable.getMessage());
             errorReceipt.setStatus("-1");
             collector.onMessage(errorReceipt, System.currentTimeMillis() - this.startTime);
             return errorReceipt;
@@ -116,8 +116,13 @@ public class PerformanceERC20 {
 
         // mint total count of erc20
         long mintCount = (long)2 * (long)total;
-        erc20.mint(mgrCredential.getAddress(), BigInteger.valueOf(mintCount));
-        System.out.println("====== PerformanceERC20 mint success , mintCount: " + mintCount + ", to: " + mgrCredential.getAddress()+ " ===");
+        TransactionReceipt receipt = erc20.mint(mgrCredential.getAddress(), BigInteger.valueOf(mintCount)).send();
+        if(receipt.isStatusOK()) {
+            System.out.println("====== PerformanceERC20 mint success , mintCount: " + mintCount + ", to: " + mgrCredential.getAddress() + " ===");
+        }else{
+            System.out.println("====== PerformanceERC20 mint failed , mintCount: " +
+                    mintCount + ", to: " + mgrCredential.getAddress() + "status: " + receipt.getStatus()+ " ===");
+        }
 
         // transfer to all accounts
         long txsPerUser = total / users;
@@ -131,25 +136,18 @@ public class PerformanceERC20 {
         CountDownLatch transactionLatch = new CountDownLatch(total);
 
         List<Thread> threads = new ArrayList<Thread>();
-        String contractAddress = erc20.getContractAddress();
+        RateLimiter limiter = RateLimiter.create(qps);
         for (int i = 0; i < users; ++i) {
             final  int index = i;
             threads.add(Thread.ofVirtual().name("RPC-" + i).start(() -> {
                 try{
-                    Web3jConnection web3jConnection = new Web3jConnection(connectionConfigParser);
-                    Web3j web3j = web3jConnection.getWeb3j();
                     Credentials credentials = Credentials.create(String.format("0x%032d", index + 1));
-
-                    TransactionManager txMgr =new FastRawTransactionManager(web3j,
-                            credentials,
-                            new PollingTransactionReceiptProcessor(web3j, pollingInterval, 40));
-                    MyERC20 myERC20 = MyERC20.load(contractAddress, web3j, txMgr, gasProvider);
-
                     for (long j = 0; j < txsPerUser; ++j) {
                         long startTime = System.currentTimeMillis();
                         try {
+                            limiter.acquire();
                             // transfer 1 every time
-                            CompletableFuture<TransactionReceipt> cf = myERC20.transfer(
+                            CompletableFuture<TransactionReceipt> cf = erc20.transfer(
                                     credentials.getAddress(), BigInteger.valueOf(1)).sendAsync();
                             sendedBar.step();
                             cf.thenAccept(new TransactionCallback(collector, receivedBar, transactionLatch));

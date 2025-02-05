@@ -41,12 +41,16 @@ public class ConnectionConfigParser extends ConfigParser {
 	public static class Service {
 		private String url;
 		private Long chainID;
+		private Integer pollingInterval;
+		private Boolean enableWs;
 
 		public Service(Object properties) throws Web3jException {
 			Map<String, Object> myProperties = (Map<String, Object>) properties;
 			System.out.println("properties:" + myProperties);
 			url = parseString(myProperties, "url");
 			chainID = parseLong(myProperties, "chainID", null);
+			pollingInterval = parseInt(myProperties, "pollingInterval", 100);
+			enableWs = Boolean.parseBoolean(parseString(myProperties, "enableWs", "false"));
 		}
 
 		public String getUrl() {
@@ -55,6 +59,14 @@ public class ConnectionConfigParser extends ConfigParser {
 
 		public Long getChainID() {
 			return chainID;
+		}
+
+		public Integer getPollingInterval() {
+			return pollingInterval;
+		}
+
+		public Boolean getEnableWs() {
+			return enableWs;
 		}
 	}
 

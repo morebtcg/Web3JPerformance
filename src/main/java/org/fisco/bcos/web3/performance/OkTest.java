@@ -51,7 +51,7 @@ public class OkTest {
 		Web3jConnection createWeb3Connection = new Web3jConnection(connectionConfigParser);
 		Web3j createWeb3j = createWeb3Connection.getWeb3j();
 		Credentials createCredentials = Credentials.create(String.format("0x%032d", users + 1));
-		Integer pollingInterval = 500;
+		Integer pollingInterval = connectionConfigParser.getService().getPollingInterval();
 		TransactionManager fastRawTxMgr =new FastRawTransactionManager(createWeb3j, createCredentials, new PollingTransactionReceiptProcessor(createWeb3j, pollingInterval, 40));
 		Ok createOk = Ok.deploy(createWeb3j, fastRawTxMgr, gasProvider).send();
 		System.out.println("====== Deploy Ok, contract address: " + createOk.getContractAddress());

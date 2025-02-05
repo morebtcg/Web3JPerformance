@@ -1,3 +1,6 @@
 [service]
-    url = 'ws://127.0.0.1:9545'
+    #url = 'ws://127.0.0.1:9545'
+    url = 'http://127.0.0.1:8545'
+    pollingInterval = 100
+    enableWs = false
     # chainID = 1234 # if needed

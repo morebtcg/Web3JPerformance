@@ -106,13 +106,13 @@ public class PerformanceERC20 {
         Web3j deployWeb3j = createWeb3Connection.getWeb3j();
         Credentials mgrCredential = Credentials.create(String.format("0x%032d", users + 1));
 
-        Integer pollingInterval = connectionConfigParser.getService().getPollingInterval();
+        Integer pollingInterval = connectionConfigParser.getService().getReceiptPollingInterval();
         TransactionManager fastRawTxMgr =new FastRawTransactionManager(deployWeb3j, mgrCredential,
                 new PollingTransactionReceiptProcessor(deployWeb3j,
                         pollingInterval, 40));
         String name = "testERC20";
         MyERC20 erc20 = MyERC20.deploy(deployWeb3j, fastRawTxMgr, gasProvider, name, name, BigInteger.valueOf(8)).send();
-        System.out.println("====== PerformanceERC20 Deploy , contract address: " + erc20.getContractAddress() + " ===");
+        System.out.println("====== PerformanceERC20 Deploy , contract address: " + erc20.getContractAddress() +  ", Receipt polling interval: " + pollingInterval + " ===");
 
         // mint total count of erc20
         long mintCount = (long)2 * (long)total;

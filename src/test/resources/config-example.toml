@@ -3,4 +3,5 @@
     url = 'http://127.0.0.1:8545'
     pollingInterval = 100
     enableWs = false
+    receiptPollingInterval=500
     # chainID = 1234 # if needed

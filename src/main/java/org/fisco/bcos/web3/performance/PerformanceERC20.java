@@ -6,11 +6,9 @@ import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
 import org.fisco.bcos.web3.connection.Web3jConnection;
+import org.fisco.bcos.web3.contract.ERC20;
 import org.fisco.bcos.web3.contract.MyERC20;
-import org.fisco.bcos.web3.utils.Collector;
-import org.fisco.bcos.web3.utils.ConfigUtils;
-import org.fisco.bcos.web3.utils.ConnectionConfigParser;
-import org.fisco.bcos.web3.utils.ObjectMapperFactory;
+import org.fisco.bcos.web3.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.web3j.crypto.Credentials;
@@ -135,37 +133,40 @@ public class PerformanceERC20 {
                 .setStyle(ProgressBarStyle.UNICODE_BLOCK).build();
         CountDownLatch transactionLatch = new CountDownLatch(total);
 
-        List<Thread> threads = new ArrayList<Thread>();
+        ThreadPoolService threadPoolService = new ThreadPoolService("perf", 10000);
         RateLimiter limiter = RateLimiter.create(qps);
-        for (int i = 0; i < users; ++i) {
-            final  int index = i;
-            threads.add(Thread.ofVirtual().name("RPC-" + i).start(() -> {
-                try{
-                    Credentials credentials = Credentials.create(String.format("0x%032d", index + 1));
-                    for (long j = 0; j < txsPerUser; ++j) {
-                        long startTime = System.currentTimeMillis();
-                        try {
-                            limiter.acquire();
-                            // transfer 1 every time
-                            CompletableFuture<TransactionReceipt> cf = erc20.transfer(
-                                    credentials.getAddress(), BigInteger.valueOf(1)).sendAsync();
-                            sendedBar.step();
-                            cf.thenAccept(new TransactionCallback(collector, receivedBar, transactionLatch));
-                            cf.exceptionally(new TransactionErrorCallback(collector, receivedBar, transactionLatch));
-                        } catch (Exception e) {
-                            LOGGER.error("error:", e);
-                            TransactionReceipt errorReceipt = new TransactionReceipt();
-                            errorReceipt.setStatus("0x2");
-                            errorReceipt.setRevertReason(e != null ? e.getMessage() : "receipt is null");
-                            long receiveTime = System.currentTimeMillis() - startTime;
-                            collector.onMessage(errorReceipt, receiveTime);
+        threadPoolService.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < users; ++i) {
+                    final  int index = i;
+                        try{
+                            Credentials credentials = Credentials.create(String.format("0x%032d", index + 1));
+                            for (long j = 0; j < txsPerUser; ++j) {
+                                long startTime = System.currentTimeMillis();
+                                try {
+                                    limiter.acquire();
+                                    // transfer 1 every time
+                                    CompletableFuture<TransactionReceipt> cf = erc20.transfer(
+                                            credentials.getAddress(), BigInteger.valueOf(1)).sendAsync();
+                                    sendedBar.step();
+                                    cf.thenAccept(new TransactionCallback(collector, receivedBar, transactionLatch));
+                                    cf.exceptionally(new TransactionErrorCallback(collector, receivedBar, transactionLatch));
+                                } catch (Exception e) {
+                                    LOGGER.error("error:", e);
+                                    TransactionReceipt errorReceipt = new TransactionReceipt();
+                                    errorReceipt.setStatus("0x2");
+                                    errorReceipt.setRevertReason(e != null ? e.getMessage() : "receipt is null");
+                                    long receiveTime = System.currentTimeMillis() - startTime;
+                                    collector.onMessage(errorReceipt, receiveTime);
+                                }
+                            }
+                        }catch(Exception e){
+                            LOGGER.warn("send transaction exception, e: ", e);
                         }
-                    }
-                }catch(Exception e){
-                    LOGGER.warn("send transaction exception, e: ", e);
                 }
-            }));
-        }
+            }
+        });
         transactionLatch.await();
         sendedBar.close();
         receivedBar.close();
